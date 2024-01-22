@@ -1,12 +1,12 @@
 "use server";
 
-import { Address } from "@/interfaces";
 import prisma from "@/lib/prisma";
+import { Address } from "@/interfaces";
 
 export const setUserAdderss = async (address: Address, userId: string) => {
   try {
     const addressDB = await createOrReplaceAddress(address, userId);
-
+    
     return {
       ok: true,
       address: addressDB,
@@ -34,7 +34,8 @@ const createOrReplaceAddress = async (address: Address, userId: string) => {
       firstName: address.firstName,
       lastName: address.lastName,
       phone: address.phone,
-      postalCoda: address.postalCode,
+      postalCode: address.postalCode,
+      city: address.city
     };
 
     if (!storedAddress) {

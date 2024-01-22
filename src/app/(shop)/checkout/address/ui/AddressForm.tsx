@@ -1,9 +1,11 @@
 "use client";
 import clsx from "clsx";
 import { useForm } from "react-hook-form";
-import { Country } from "@/interfaces";
+import { Address, Country } from "@/interfaces";
 import { useAddressStore } from "@/store";
 import { useEffect } from "react";
+import { deleteUserAddress, setUserAdderss } from "@/actions";
+import { useSession } from "next-auth/react";
 
 type FormInputs = {
   firstName: string;
@@ -19,9 +21,10 @@ type FormInputs = {
 
 interface Props {
   countries: Country[];
+  userStoredAddress?: Partial<Address>;
 }
 
-export const AddressForm = ({ countries }: Props) => {
+export const AddressForm = ({ countries, userStoredAddress = {} }: Props) => {
   const {
     handleSubmit,
     register,
@@ -29,21 +32,34 @@ export const AddressForm = ({ countries }: Props) => {
     reset,
   } = useForm<FormInputs>({
     defaultValues: {
-      // Todo: Leer de la BD
+      ...(userStoredAddress as any),
+      rememberAddress: false,
     },
   });
+
+  const { data: session } = useSession({ required: true });
 
   const setAddress = useAddressStore((state) => state.setAddress);
   const address = useAddressStore((state) => state.address);
 
   useEffect(() => {
-    if(address.firstName) {
-      reset(address)
+    if (address.firstName) {
+      reset(address);
     }
-  }, [])
+  }, []);
 
   const onSubmit = (data: FormInputs) => {
     setAddress(data);
+    console.log(data);
+    const { rememberAddress, ...restAddress } = data;
+    console.log(rememberAddress);
+    if (rememberAddress) {
+      //todo: Server action
+      setUserAdderss(restAddress, session!.user.id);
+    } else {
+      //todo: server action
+      deleteUserAddress(session!.user.id);
+    }
   };
 
   return (
@@ -109,7 +125,7 @@ export const AddressForm = ({ countries }: Props) => {
         <span>País</span>
         <select
           className="p-2 border rounded-md bg-gray-200"
-          {...register("rememberAddress", { required: true })}
+          {...register("country", { required: true })}
         >
           <option value="">[ Seleccione ]</option>
           {countries.map((country) => (
@@ -139,6 +155,7 @@ export const AddressForm = ({ countries }: Props) => {
               type="checkbox"
               className="border-gray-500 before:content[''] peer relative h-5 w-5 cursor-pointer appearance-none rounded-md border border-blue-gray-200 transition-all before:absolute before:top-2/4 before:left-2/4 before:block before:h-12 before:w-12 before:-translate-y-2/4 before:-translate-x-2/4 before:rounded-full before:bg-blue-gray-500 before:opacity-0 before:transition-opacity checked:border-blue-500 checked:bg-blue-500 checked:before:bg-blue-500 hover:before:opacity-10"
               id="checkbox"
+              {...register("rememberAddress")}
             />
             <div className="pointer-events-none absolute top-2/4 left-2/4 -translate-y-2/4 -translate-x-2/4 text-white opacity-0 transition-opacity peer-checked:opacity-100">
               <svg
@@ -161,12 +178,12 @@ export const AddressForm = ({ countries }: Props) => {
         </div>
 
         <button
-          disabled={isValid}
+          disabled={!isValid}
           type="submit"
           // className="btn-primary flex w-full sm:w-1/2 justify-center "
           className={clsx({
-            "btn-primary": isValid,
-            "btn-disabled": !isValid,
+            "btn-primary cursor-pointer": isValid,
+            "btn-disabled cursor-default": !isValid,
           })}
         >
           Siguiente
